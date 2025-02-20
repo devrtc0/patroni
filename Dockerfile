@@ -1,4 +1,4 @@
-FROM postgres:17-alpine
+FROM citusdata/citus:alpine
 
 RUN apk add --no-cache su-exec py3-virtualenv dumb-init \
     && apk add --no-cache --virtual build-dependencies build-base linux-headers python3-dev py3-pip \

@@ -8,5 +8,6 @@ readonly DOCKER_IP
 chmod 0700 /var/lib/postgresql/data
 
 export PATRONI_POSTGRESQL_CONNECT_ADDRESS="$DOCKER_IP:5432"
+export PATRONI_RESTAPI_CONNECT_ADDRESS="$DOCKER_IP:8008"
 
 exec su-exec postgres dumb-init /venv/bin/patroni /etc/patroni/patroni.yml

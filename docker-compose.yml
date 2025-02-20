@@ -16,29 +16,116 @@ services:
       - pgnet
     healthcheck:
       test: [ "CMD-SHELL", "etcdctl --cluster=true endpoint health || exit 1" ]
-      interval: 2s
+      interval: 5s
       timeout: 3s
       retries: 5
       start_period: 5s
-  pg1: &pg_base
-    container_name: pg1
+      start_interval: 1s
+  pg_c1: &pg_base
+    container_name: pg_c1
     build:
       context: .
     environment:
-      - PATRONI_NAME=pg1
+      - PATRONI_NAME=pg_c1
     volumes:
       - ./patroni.yml:/etc/patroni/patroni.yml:ro
     networks:
       - pgnet
     depends_on:
-      - etcd
-  pg2:
+      etcd:
+        condition: service_healthy
+    healthcheck:
+      test: pg_isready -U postgres
+      start_period: 10s
+      start_interval: 1s
+      interval: 5s
+      timeout: 2s
+      retries: 5
+  pg_c2:
     <<: *pg_base
-    container_name: pg2
+    container_name: pg_c2
+    depends_on:
+      pg_c1:
+        condition: service_healthy
     environment:
-      - PATRONI_NAME=pg2
-  pg3:
+      - PATRONI_NAME=pg_c2
+  pg_c3:
     <<: *pg_base
-    container_name: pg3
+    container_name: pg_c3
+    depends_on:
+      pg_c1:
+        condition: service_healthy
     environment:
-      - PATRONI_NAME=pg3
+      - PATRONI_NAME=pg_c3
+  pg_w1-1:
+    <<: *pg_base
+    container_name: pg_w1-1
+    environment:
+      - PATRONI_NAME=pg_w1-1
+      - PATRONI_CITUS_GROUP=1
+  pg_w1-2:
+    <<: *pg_base
+    container_name: pg_w1-2
+    depends_on:
+      pg_w1-1:
+        condition: service_healthy
+    environment:
+      - PATRONI_NAME=pg_w1-2
+      - PATRONI_CITUS_GROUP=1
+  pg_w1-3:
+    <<: *pg_base
+    container_name: pg_w1-3
+    depends_on:
+      pg_w1-1:
+        condition: service_healthy
+    environment:
+      - PATRONI_NAME=pg_w1-3
+      - PATRONI_CITUS_GROUP=1
+  pg_w2-1:
+    <<: *pg_base
+    container_name: pg_w2-1
+    environment:
+      - PATRONI_NAME=pg_w2-1
+      - PATRONI_CITUS_GROUP=2
+  pg_w2-2:
+    <<: *pg_base
+    container_name: pg_w2-2
+    depends_on:
+      pg_w2-1:
+        condition: service_healthy
+    environment:
+      - PATRONI_NAME=pg_w2-2
+      - PATRONI_CITUS_GROUP=2
+  pg_w2-3:
+    <<: *pg_base
+    container_name: pg_w2-3
+    depends_on:
+      pg_w2-1:
+        condition: service_healthy
+    environment:
+      - PATRONI_NAME=pg_w2-3
+      - PATRONI_CITUS_GROUP=2
+  pg_w3-1:
+    <<: *pg_base
+    container_name: pg_w3-1
+    environment:
+      - PATRONI_NAME=pg_w3-1
+      - PATRONI_CITUS_GROUP=3
+  pg_w3-2:
+    <<: *pg_base
+    container_name: pg_w3-2
+    depends_on:
+      pg_w3-1:
+        condition: service_healthy
+    environment:
+      - PATRONI_NAME=pg_w3-2
+      - PATRONI_CITUS_GROUP=3
+  pg_w3-3:
+    <<: *pg_base
+    container_name: pg_w3-3
+    depends_on:
+      pg_w3-1:
+        condition: service_healthy
+    environment:
+      - PATRONI_NAME=pg_w3-3
+      - PATRONI_CITUS_GROUP=3
