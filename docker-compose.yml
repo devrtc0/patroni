@@ -21,14 +21,39 @@ services:
       retries: 5
       start_period: 5s
       start_interval: 1s
-  pg_c1: &pg_base
-    container_name: pg_c1
+
+  haproxy:
+    container_name: haproxy
+    image: haproxy:alpine
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+      - "7000:7000"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - pgnet
+    depends_on:
+      - pg_coord
+    healthcheck:
+      test: wget 127.0.0.1:7000 -O /dev/null -q || echo 1
+      start_period: 10s
+      start_interval: 1s
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  pg_coord: &pg_base
     build:
-      context: .
-    environment:
-      - PATRONI_NAME=pg_c1
+      context: ./db/
+    environment: &pg_env
+      NAME_PREFIX: coord
+      POST_INIT_PATH: /tmp/init.sh
+    deploy:
+      replicas: 3
     volumes:
       - ./patroni.yml:/etc/patroni/patroni.yml:ro
+      - ./db/init.sh:/var/lib/postgresql/init.sh:ro
     networks:
       - pgnet
     depends_on:
@@ -41,91 +66,21 @@ services:
       interval: 5s
       timeout: 2s
       retries: 5
-  pg_c2:
+  pg_worker1:
     <<: *pg_base
-    container_name: pg_c2
-    depends_on:
-      pg_c1:
-        condition: service_healthy
     environment:
-      - PATRONI_NAME=pg_c2
-  pg_c3:
+      <<: *pg_env
+      NAME_PREFIX: worker1
+      PATRONI_CITUS_GROUP: 1
+  pg_worker2:
     <<: *pg_base
-    container_name: pg_c3
-    depends_on:
-      pg_c1:
-        condition: service_healthy
     environment:
-      - PATRONI_NAME=pg_c3
-  pg_w1-1:
+      <<: *pg_env
+      NAME_PREFIX: worker2
+      PATRONI_CITUS_GROUP: 2
+  pg_worker3:
     <<: *pg_base
-    container_name: pg_w1-1
     environment:
-      - PATRONI_NAME=pg_w1-1
-      - PATRONI_CITUS_GROUP=1
-  pg_w1-2:
-    <<: *pg_base
-    container_name: pg_w1-2
-    depends_on:
-      pg_w1-1:
-        condition: service_healthy
-    environment:
-      - PATRONI_NAME=pg_w1-2
-      - PATRONI_CITUS_GROUP=1
-  pg_w1-3:
-    <<: *pg_base
-    container_name: pg_w1-3
-    depends_on:
-      pg_w1-1:
-        condition: service_healthy
-    environment:
-      - PATRONI_NAME=pg_w1-3
-      - PATRONI_CITUS_GROUP=1
-  pg_w2-1:
-    <<: *pg_base
-    container_name: pg_w2-1
-    environment:
-      - PATRONI_NAME=pg_w2-1
-      - PATRONI_CITUS_GROUP=2
-  pg_w2-2:
-    <<: *pg_base
-    container_name: pg_w2-2
-    depends_on:
-      pg_w2-1:
-        condition: service_healthy
-    environment:
-      - PATRONI_NAME=pg_w2-2
-      - PATRONI_CITUS_GROUP=2
-  pg_w2-3:
-    <<: *pg_base
-    container_name: pg_w2-3
-    depends_on:
-      pg_w2-1:
-        condition: service_healthy
-    environment:
-      - PATRONI_NAME=pg_w2-3
-      - PATRONI_CITUS_GROUP=2
-  pg_w3-1:
-    <<: *pg_base
-    container_name: pg_w3-1
-    environment:
-      - PATRONI_NAME=pg_w3-1
-      - PATRONI_CITUS_GROUP=3
-  pg_w3-2:
-    <<: *pg_base
-    container_name: pg_w3-2
-    depends_on:
-      pg_w3-1:
-        condition: service_healthy
-    environment:
-      - PATRONI_NAME=pg_w3-2
-      - PATRONI_CITUS_GROUP=3
-  pg_w3-3:
-    <<: *pg_base
-    container_name: pg_w3-3
-    depends_on:
-      pg_w3-1:
-        condition: service_healthy
-    environment:
-      - PATRONI_NAME=pg_w3-3
-      - PATRONI_CITUS_GROUP=3
+      <<: *pg_env
+      NAME_PREFIX: worker3
+      PATRONI_CITUS_GROUP: 3
